@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "promptlab": {
+      "command": "python",
+      "args": ["promptlab_server.py"],
+      "cwd": "e:\\User\\MCP\\PromptLab",
+      "env": {
+        "PYTHONPATH": "e:\\User\\MCP\\PromptLab"
+      }
+    }
+  }
+}

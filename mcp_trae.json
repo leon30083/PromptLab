@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "promptlab": {
+      "command": "e:\\User\\MCP\\PromptLab\\venv\\Scripts\\python.exe",
+      "args": ["e:\\User\\MCP\\PromptLab\\promptlab_server.py"],
+      "cwd": "e:\\User\\MCP\\PromptLab",
+      "env": {
+        "PYTHONPATH": "e:\\User\\MCP\\PromptLab",
+        "VIRTUAL_ENV": "e:\\User\\MCP\\PromptLab\\venv",
+        "MLFLOW_TRACKING_URI": "http://127.0.0.1:5000",
+        "PROMPTLAB_DEBUG": "false"
+      },
+      "timeout": 30000,
+      "restart": true,
+      "description": "PromptLab MCP Server - AI Prompt Management with Gemini 2.5 Pro"
+    }
+  }
+}

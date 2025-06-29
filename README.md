@@ -1,15 +1,17 @@
-# PromptLab: AI Query Enhancement with MLflow Integration
+# PromptLab: MCP Server for AI Query Enhancement
 
-PromptLab is an intelligent system that transforms basic user queries into optimized prompts for AI systems using MLflow Prompt Registry. It dynamically matches user requests to the most appropriate prompt template and applies it with extracted parameters.
+PromptLab is a **Model Context Protocol (MCP) server** that transforms basic user queries into optimized prompts using MLflow Prompt Registry and Google's Gemini 2.5 Pro model. It intelligently matches user requests to the most appropriate prompt template and enhances them for better AI responses.
 
 ## 🔍 Overview
 
-PromptLab combines MLflow Prompt Registry with dynamic prompt matching to create a powerful, flexible system for prompt engineering:
+PromptLab is designed as a standard MCP tool that can be integrated into any MCP-compatible application (Claude Desktop, Cline, etc.):
 
-- **Centralized Prompt Management**: Store, version, and manage prompts in MLflow
-- **Dynamic Matching**: Intelligently match user queries to the best prompt template
-- **Version Control**: Track prompt history with production and archive aliases
-- **Extensible**: Easily add new prompt types without code changes
+- **🤖 MCP Standard Compliance**: Full Model Context Protocol implementation
+- **🧠 Gemini 2.5 Pro Integration**: Powered by Google's latest AI model
+- **📚 Centralized Prompt Management**: Store, version, and manage prompts in MLflow
+- **🎯 Dynamic Matching**: Intelligently match user queries to the best prompt template
+- **📈 Version Control**: Track prompt history with production and archive aliases
+- **🔧 Extensible**: Easily add new prompt types without code changes
 
 ## 🏗️ Architecture
 
@@ -71,27 +73,77 @@ promptlab/
   - List available prompts
   - Display detailed prompt matching information
 
-## 🚀 Getting Started
+## 🛠️ Technology Stack
+
+- **MCP (Model Context Protocol)**: Standard protocol for AI tool integration
+- **Google Vertex AI**: Gemini 2.5 Pro model for intelligent prompt matching
+- **MLflow**: Prompt registry and experiment tracking
+- **LangGraph**: Workflow orchestration and state management
+- **Python 3.12**: Core runtime environment
+- **Rich**: Enhanced console output and formatting
+
+## 📦 Installation & Setup
 
 ### Prerequisites
+- Python 3.12+
+- Google Cloud Platform account with Vertex AI enabled
+- MLflow server (local or remote)
+- MCP-compatible application (Claude Desktop, Cline, etc.)
 
-- Python 3.12
-- Dependencies in `requirements.txt`
-- OpenAI API key for LLM capabilities
+### Step 1: Environment Setup
 
-### Installation
+1. **Clone and navigate to the repository**:
+   ```bash
+   git clone https://github.com/iRahulPandey/PromptLab.git
+   cd PromptLab
+   ```
 
-```bash
-# Clone the repository
-git clone https://github.com/iRahulPandey/PromptLab.git
-cd PromptLab
+2. **Create and activate virtual environment**:
+   ```bash
+   python -m venv venv
+   # Windows
+   .\venv\Scripts\Activate.ps1
+   # Linux/Mac
+   source venv/bin/activate
+   ```
 
-# Install dependencies
-pip install -r requirements.txt
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# Set environment variables
-export OPENAI_API_KEY="your-openai-api-key"
-```
+### Step 2: Configuration
+
+1. **Configure environment variables**:
+   Create a `.env` file:
+   ```env
+   GCP_PROJECT_ID="your-gcp-project-id"
+   GCP_LOCATION="us-central1"
+   MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
+   ```
+
+2. **Set up Google Cloud authentication**:
+   ```bash
+   # Install Google Cloud CLI and authenticate
+   gcloud auth application-default login
+   ```
+
+### Step 3: Start Services
+
+1. **Start MLflow server** (in a separate terminal):
+   ```bash
+   mlflow server --host 127.0.0.1 --port 5000
+   ```
+
+2. **Register sample prompts**:
+   ```bash
+   python register_prompts.py register-samples
+   ```
+
+3. **Test the MCP server**:
+   ```bash
+   python test_mcp.py
+   ```
 
 ### Registering Prompts
 
@@ -108,24 +160,79 @@ python register_prompts.py register-file --file advanced_prompts.json
 python register_prompts.py list
 ```
 
-### Running the Server
+### Step 4: MCP Client Configuration
+
+1. **Add to your MCP client configuration**:
+   
+   For **Claude Desktop**, add to your `claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "promptlab": {
+         "command": "python",
+         "args": ["e:\\User\\MCP\\PromptLab\\promptlab_server.py"],
+         "cwd": "e:\\User\\MCP\\PromptLab",
+         "env": {
+           "GCP_PROJECT_ID": "your-gcp-project-id",
+           "GCP_LOCATION": "us-central1",
+           "MLFLOW_TRACKING_URI": "http://127.0.0.1:5000"
+         }
+       }
+     }
+   }
+   ```
+
+   For **Cline** or other MCP clients, use the provided `mcp.json` configuration file.
+
+2. **Restart your MCP client** to load the new server.
+
+## 🚀 Usage
+
+### Available MCP Tools
+
+Once configured, PromptLab provides these tools in your MCP client:
+
+1. **`optimize_query`** - Enhance user queries with best-matched prompts
+   - Input: Your natural language query
+   - Output: Enhanced prompt optimized for AI responses
+
+2. **`list_prompts`** - List all available prompt templates
+   - Shows all registered prompts with their descriptions
+
+3. **`reload_prompts`** - Reload prompts from MLflow registry
+   - Refreshes the prompt cache from MLflow
+
+### Example Usage in Claude Desktop
+
+1. **Optimize a query**:
+   ```
+   User: "Help me write a blog post about AI"
+   PromptLab: [Uses blog_prompt template to enhance the request]
+   ```
+
+2. **List available prompts**:
+   ```
+   User: "What prompts are available?"
+   PromptLab: [Shows all registered prompt templates]
+   ```
+
+### Command Line Usage (Development)
 
 ```bash
-# Start the server
-python promptlab_server.py
-```
+# Register prompts from JSON file
+python register_prompts.py register-from-file advanced_prompts.json
 
-### Using the Client
+# Register individual prompt
+python register_prompts.py register "My Prompt" "Template: {input}" "Added new prompt"
 
-```bash
-# Process a query
-python promptlab_client.py "Write a blog post about machine learning"
+# List all prompts
+python register_prompts.py list
 
-# List available prompts
-python promptlab_client.py --list
+# Get prompt details
+python register_prompts.py details "essay_prompt"
 
-# Enable verbose output
-python promptlab_client.py --verbose "Create a presentation on climate change"
+# Test the MCP server
+python test_mcp.py
 ```
 
 ## 📋 Prompt Management
@@ -266,6 +373,47 @@ python register_prompts.py register \
 
 ## 🔧 Troubleshooting
 
+### Common Issues
+
+1. **"GCP authentication failed"**
+   ```bash
+   # Re-authenticate with Google Cloud
+   gcloud auth application-default login
+   ```
+
+2. **"MLflow connection refused"**
+   ```bash
+   # Make sure MLflow server is running
+   mlflow server --host 127.0.0.1 --port 5000
+   ```
+
+3. **"No prompts found"**
+   ```bash
+   # Register sample prompts
+   python register_prompts.py register-samples
+   ```
+
+4. **"MCP server not responding"**
+   ```bash
+   # Test the server
+   python test_mcp.py
+   ```
+
+5. **"Virtual environment not activated"**
+   ```bash
+   # Windows
+   .\venv\Scripts\Activate.ps1
+   # Linux/Mac
+   source venv/bin/activate
+   ```
+
+### Debug Mode
+
+For detailed logging, set the environment variable:
+```bash
+export LOG_LEVEL="DEBUG"
+```
+
 ### No Matching Prompt Found
 
 If the system can't match a query to any prompt template, it will:
@@ -277,9 +425,51 @@ You can add more diverse prompt templates to improve matching.
 
 ### LLM Connection Issues
 
-If the LLM service is unavailable, the system falls back to:
+If the Gemini service is unavailable, the system falls back to:
 1. Keyword-based matching for prompt selection
 2. Simple parameter extraction
 3. Basic prompt enhancement
 
 This ensures the system remains functional even without LLM access.
+
+## 📁 Project Structure
+
+```
+PromptLab/
+├── promptlab_server.py      # MCP server with Gemini 2.5 Pro integration
+├── promptlab_client.py      # Legacy HTTP client (for reference)
+├── register_prompts.py      # MLflow prompt registration utilities
+├── start_mcp.py            # MCP server startup script
+├── test_mcp.py             # MCP server testing script
+├── advanced_prompts.json    # Sample prompt templates
+├── mcp.json                # MCP client configuration
+├── requirements.txt         # Python dependencies
+├── .env                     # Environment configuration
+├── 测试流程.md              # Testing workflow (Chinese)
+└── README.md               # This documentation
+```
+
+## 🚀 Quick Start Checklist
+
+- [ ] Python 3.12+ installed
+- [ ] Virtual environment created and activated
+- [ ] Dependencies installed (`pip install -r requirements.txt`)
+- [ ] `.env` file configured with GCP credentials
+- [ ] Google Cloud authentication completed
+- [ ] MLflow server running (`mlflow server --host 127.0.0.1 --port 5000`)
+- [ ] Sample prompts registered (`python register_prompts.py register-samples`)
+- [ ] MCP server tested (`python test_mcp.py`)
+- [ ] MCP client configured (Claude Desktop/Cline)
+- [ ] Client restarted to load the new server
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**🎉 Congratulations!** You now have a fully functional MCP server that enhances AI queries using intelligent prompt matching with Gemini 2.5 Pro and MLflow integration.
