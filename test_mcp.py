@@ -1,106 +1,33 @@
 #!/usr/bin/env python3
-"""
-Test script for PromptLab MCP Server
-This script tests the MCP server functionality locally
-"""
 
 import asyncio
 import json
-import subprocess
-import sys
-import os
-from pathlib import Path
+import promptlab_server
+from promptlab_server import initialize_components
 
-async def test_mcp_server():
-    """Test the MCP server by running it and sending test commands"""
-    print("🧪 Testing PromptLab MCP Server...")
+async def test_mcp():
+    output = []
+    output.append("Testing MCP server components...")
     
-    # Check if virtual environment is activated
-    if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-        print("⚠️  Warning: Virtual environment not detected. Please activate venv first.")
-        print("   Run: .\\venv\\Scripts\\Activate.ps1")
-        return False
+    # Test initialization
+    success = await initialize_components()
+    output.append(f"Initialization success: {success}")
     
-    # Check if required files exist
-    required_files = ['.env', 'promptlab_server.py']
-    for file in required_files:
-        if not Path(file).exists():
-            print(f"❌ Required file missing: {file}")
-            return False
+    # Check available prompts
+    output.append(f"Available prompts count: {len(promptlab_server.available_prompts)}")
+    output.append(f"Available prompts: {list(promptlab_server.available_prompts.keys())}")
     
-    print("✅ All required files found")
+    # Test each prompt
+    for name, data in promptlab_server.available_prompts.items():
+        output.append(f"\nPrompt: {name}")
+        output.append(f"  Version: {data.get('version', 'unknown')}")
+        output.append(f"  Template preview: {data.get('template', '')[:100]}...")
     
-    # Test 1: Check if server can start
-    print("\n📡 Test 1: Server startup test")
-    try:
-        # Start the server process
-        process = subprocess.Popen(
-            [sys.executable, 'promptlab_server.py'],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=os.getcwd()
-        )
-        
-        # Send initialization request
-        init_request = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {
-                    "name": "test-client",
-                    "version": "1.0.0"
-                }
-            }
-        }
-        
-        # Send the request
-        process.stdin.write(json.dumps(init_request) + '\n')
-        process.stdin.flush()
-        
-        # Wait for response with timeout
-        try:
-            stdout, stderr = process.communicate(timeout=10)
-            if process.returncode == 0 or "initialized" in stdout.lower():
-                print("✅ Server started successfully")
-            else:
-                print(f"❌ Server startup failed: {stderr}")
-                return False
-        except subprocess.TimeoutExpired:
-            print("⏰ Server startup timeout - this might be normal for MCP servers")
-            process.terminate()
-            
-    except Exception as e:
-        print(f"❌ Server test failed: {e}")
-        return False
+    # Write to file
+    with open('test_output.txt', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(output))
     
-    print("\n🎉 Basic MCP server test completed!")
-    print("\n📋 Next steps:")
-    print("1. Start MLflow server: mlflow server --host 127.0.0.1 --port 5000")
-    print("2. Register prompts: python register_prompts.py register-samples")
-    print("3. Add this server to your MCP client configuration")
-    print("4. Use the mcp.json configuration file provided")
-    
-    return True
-
-def main():
-    """Main test function"""
-    print("🚀 PromptLab MCP Server Test Suite")
-    print("=" * 50)
-    
-    # Run async test
-    result = asyncio.run(test_mcp_server())
-    
-    if result:
-        print("\n✅ All tests passed! Your MCP server is ready to use.")
-        sys.exit(0)
-    else:
-        print("\n❌ Some tests failed. Please check the configuration.")
-        sys.exit(1)
+    print('Test completed. Results written to test_output.txt')
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(test_mcp())

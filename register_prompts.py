@@ -52,16 +52,15 @@ def register_prompt(
         # Check if the prompt already exists with a production alias
         previous_production_version = None
         try:
-            # This FutureWarning indicates the API is changing, our code is fine for now
-            previous_prompt = mlflow.load_prompt(f"prompts:/{name}@production")
+            # Use the new mlflow.genai API
+            previous_prompt = mlflow.genai.load_prompt(f"prompts:/{name}@production")
             previous_production_version = previous_prompt.version
             logger.info(f"Found existing production version {previous_production_version} for '{name}'")
         except Exception:
             logger.info(f"No existing production version found for '{name}'")
         
-        # This FutureWarning indicates the API is changing, our code is fine for now
-        # MODIFICATION: Removed the outdated 'version_metadata' argument
-        prompt = mlflow.register_prompt(
+        # Use the new mlflow.genai API
+        prompt = mlflow.genai.register_prompt(
             name=name,
             template=template,
             commit_message=commit_message,
@@ -72,12 +71,12 @@ def register_prompt(
         if set_as_production:
             # Archive the previous production version if it exists
             if previous_production_version is not None:
-                # This FutureWarning indicates the API is changing, our code is fine for now
-                mlflow.set_prompt_alias(name, "archived", previous_production_version)
+                # Use the new mlflow.genai API
+                mlflow.genai.set_prompt_alias(name, "archived", previous_production_version)
                 logger.info(f"Archived '{name}' version {previous_production_version}")
                 
             # Set new version as production
-            mlflow.set_prompt_alias(name, "production", prompt.version)
+            mlflow.genai.set_prompt_alias(name, "production", prompt.version)
             logger.info(f"Set '{name}' version {prompt.version} as production alias")
         
         result = {
@@ -244,7 +243,7 @@ def list_prompts() -> Dict[str, Any]:
         prompts_info = []
         for name in prompts:
             try:
-                latest_prompt = mlflow.load_prompt(f"prompts:/{name}")
+                latest_prompt = mlflow.genai.load_prompt(f"prompts:/{name}")
                 prompts_info.append({
                     "name": name,
                     "latest_version": latest_prompt.version,

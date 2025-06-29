@@ -22,7 +22,10 @@ import mlflow
 from mlflow.tracking import MlflowClient
 
 # --- Logging Setup ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Check debug mode from environment
+debug_mode = os.getenv('PROMPTLAB_DEBUG', 'false').lower() == 'true'
+log_level = logging.DEBUG if debug_mode else logging.INFO
+logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("promptlab-server")
 
 # --- Environment Setup ---
@@ -81,33 +84,70 @@ async def initialize_components():
 
 # --- Core Functions ---
 async def load_all_prompts() -> Dict[str, Any]:
-    """Load all prompts from MLflow registry"""
-    if not mlflow_client:
-        return {}
-    
+    """Load all prompts from MLflow registry or use fallback prompts"""
     prompts = {}
-    try:
-        registered_models = mlflow_client.search_registered_models()
-        for model in registered_models:
-            try:
-                prompt = mlflow.load_prompt(f"prompts:/{model.name}")
-                prompts[model.name] = {
-                    "template": prompt.template,
-                    "tags": getattr(prompt, "tags", {}),
-                    "version": getattr(prompt, "version", "unknown")
-                }
-            except Exception as e:
-                logger.warning(f"Failed to load prompt {model.name}: {e}")
-                continue
-        
-        logger.info(f"Successfully loaded {len(prompts)} prompts from MLflow.")
-    except Exception as e:
-        logger.error(f"Failed to load prompts from MLflow URI '{MLFLOW_TRACKING_URI}': {e}")
     
+    # 首先尝试从MLflow加载
+    if mlflow_client:
+        try:
+            # Try to load known prompt names with specific versions
+            known_prompts = {
+                "essay_prompt": "9",
+                "email_prompt": "9", 
+                "technical_prompt": "9",
+                "creative_prompt": "9",
+                "test_prompt": "1"
+            }
+            
+            for name, version in known_prompts.items():
+                try:
+                    prompt = mlflow.genai.load_prompt(f"prompts:/{name}/{version}")
+                    prompts[name] = {
+                        "template": prompt.template,
+                        "tags": getattr(prompt, "tags", {}),
+                        "version": getattr(prompt, "version", version)
+                    }
+                except Exception as e:
+                    logger.debug(f"Prompt {name} version {version} not found: {e}")
+                    continue
+            
+            if prompts:
+                logger.info(f"Successfully loaded {len(prompts)} prompts from MLflow.")
+                return prompts
+        except Exception as e:
+            logger.error(f"Failed to load prompts from MLflow URI '{MLFLOW_TRACKING_URI}': {e}")
+    
+    # 如果MLflow加载失败，使用内置的示例提示词
+    logger.info("Using fallback built-in prompts")
+    prompts = {
+        "essay_prompt": {
+            "template": "Write a well-structured essay on {{ topic }} that includes:\n- A compelling introduction that provides context and states your thesis\n- 2-3 body paragraphs, each with a clear topic sentence and supporting evidence\n- Logical transitions between paragraphs that guide the reader\n- A conclusion that synthesizes your main points and offers final thoughts\n\nThe essay should be informative, well-reasoned, and demonstrate critical thinking.",
+            "tags": {"task": "writing", "type": "essay"},
+            "version": "fallback"
+        },
+        "email_prompt": {
+            "template": "Write a {{ formality }} email to my {{ recipient_type }} about {{ topic }} that includes:\n- A clear subject line\n- Appropriate greeting\n- Brief introduction stating the purpose\n- Main content in short paragraphs\n- Specific action items or requests clearly highlighted\n- Professional closing\n\nThe tone should be {{ tone }}.",
+            "tags": {"task": "writing", "type": "email"},
+            "version": "fallback"
+        },
+        "technical_prompt": {
+            "template": "Provide a clear technical explanation of {{ topic }} for a {{ audience }} audience that:\n- Begins with a conceptual overview that anyone can understand\n- Uses analogies or real-world examples to illustrate complex concepts\n- Defines technical terminology when first introduced\n- Gradually increases in technical depth\n- Includes practical applications or implications where relevant\n- Addresses common misunderstandings or misconceptions",
+            "tags": {"task": "explanation", "type": "technical"},
+            "version": "fallback"
+        },
+        "creative_prompt": {
+            "template": "Write a creative {{ genre }} about {{ topic }} that:\n- Uses vivid sensory details and imagery\n- Develops interesting and multidimensional characters (if applicable)\n- Creates an engaging narrative arc with tension and resolution\n- Establishes a distinct mood, tone, and atmosphere\n- Employs figurative language to enhance meaning\n- Avoids clichés and predictable elements",
+            "tags": {"task": "writing", "type": "creative"},
+            "version": "fallback"
+        }
+    }
+    
+    logger.info(f"Loaded {len(prompts)} fallback prompts.")
     return prompts
 
 async def match_prompt(query: str) -> Dict[str, Any]:
     """Match user query to the best prompt template"""
+    global available_prompts
     if not available_prompts or not llm:
         status = "no_prompts_available" if not available_prompts else "no_llm"
         return {"status": status, "prompt_name": None}
@@ -142,6 +182,7 @@ async def match_prompt(query: str) -> Dict[str, Any]:
 
 async def enhance_query(query: str, prompt_name: str) -> str:
     """Apply the selected prompt template to enhance the query"""
+    global available_prompts
     if prompt_name not in available_prompts:
         return query
     
@@ -198,6 +239,7 @@ async def list_tools() -> List[Tool]:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> List[TextContent]:
     """Handle tool calls"""
+    global available_prompts, llm, mlflow_client
     try:
         if name == "optimize_query":
             query = arguments.get("query", "")
@@ -228,10 +270,14 @@ async def call_tool(name: str, arguments: dict) -> List[TextContent]:
             return [TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]
         
         elif name == "list_prompts":
+            # Debug: Check available_prompts status
+            logger.debug(f"available_prompts type: {type(available_prompts)}")
+            logger.debug(f"available_prompts content: {available_prompts}")
+            
             prompt_list = []
-            for name, data in available_prompts.items():
+            for prompt_name, data in available_prompts.items():
                 prompt_list.append({
-                    "name": name,
+                    "name": prompt_name,
                     "tags": data.get("tags", {}),
                     "version": data.get("version", "unknown")
                 })
@@ -244,7 +290,8 @@ async def call_tool(name: str, arguments: dict) -> List[TextContent]:
             return [TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]
         
         elif name == "reload_prompts":
-            available_prompts = await load_all_prompts()
+            globals()['available_prompts'] = await load_all_prompts()
+            available_prompts = globals()['available_prompts']
             
             result = {
                 "status": "success",
