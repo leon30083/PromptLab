@@ -3,232 +3,99 @@ import argparse
 import logging
 import os
 import json
+import textwrap
+import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# --- Client-Side Setup ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("promptlab-client")
 
-# Set up environment
-from dotenv import load_dotenv
-load_dotenv()
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-PROMPTLAB_SERVER_SCRIPT = os.environ.get("PROMPTLAB_SERVER_SCRIPT", "promptlab_server.py")
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+PROMPTLAB_SERVER_SCRIPT = os.path.abspath("promptlab_server.py")
 
-async def list_available_prompts():
-    """List all available prompts from MLflow Prompt Registry."""
-    logger.info("Listing available prompts")
-    
-    # Set up server parameters
-    server_params = StdioServerParameters(
-        command="python",
-        args=[PROMPTLAB_SERVER_SCRIPT],
-    )
-    
-    try:
-        # Connect to the PromptLab server
-        async with stdio_client(server_params) as (read, write):
-            logger.info("Connected to PromptLab server")
-            
-            async with ClientSession(read, write) as session:
-                # Initialize the connection
-                await session.initialize()
-                
-                # Call the list_prompts tool
-                result = await session.call_tool(
-                    name="list_prompts", 
-                    arguments={}
-                )
-                
-                # Extract result
-                if hasattr(result, 'content') and len(result.content) > 0:
-                    result_data = json.loads(result.content[0].text)
-                    prompts = result_data.get("prompts", [])
-                    
-                    print("\n=== Available Prompts ===\n")
-                    for prompt in prompts:
-                        print(f"Name: {prompt['name']}")
-                        print(f"Type: {prompt['type']}")
-                        print(f"Version: {prompt.get('version', 'unknown')}")
-                        if prompt.get('variables'):
-                            print(f"Variables: {', '.join(prompt['variables'])}")
-                        if prompt.get('tags'):
-                            print(f"Tags: {prompt['tags']}")
-                        print()
-                    
-                    if not prompts:
-                        print("No prompts found in the registry. Initialize prompts using 'register_prompts.py register-samples'.")
-                else:
-                    logger.warning("No content returned from server")
-                    print("Failed to retrieve prompts. Check server logs for details.")
-    
-    except Exception as e:
-        logger.error(f"Error listing prompts: {e}", exc_info=True)
-        print(f"Error: {str(e)}")
+class Colors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
 
-async def process_query(query: str):
-    """Process a query through PromptLab and generate a response."""
-    logger.info(f"Processing query: '{query}'")
+def pretty_print_result(data, verbose=False):
+    """Prints the final result with enhanced error reporting."""
+    if not isinstance(data, dict):
+        print(f"{Colors.FAIL}Error: Unexpected response format from server.{Colors.ENDC}\n{data}")
+        return
+
+    print(f"\n{Colors.GREEN}{Colors.BOLD}--- PromptLab Analysis ---{Colors.ENDC}")
+    print(f"{Colors.HEADER}Original Query:{Colors.ENDC} {data.get('original_query')}")
+
+    if "error" in data:
+        print(f"\n{Colors.FAIL}{Colors.BOLD}--- SERVER-SIDE ERROR ---{Colors.ENDC}")
+        print("The server encountered an unrecoverable error. Full details below:")
+        print(textwrap.indent(data["error"], "  "))
+        print(f"{Colors.FAIL}---------------------------{Colors.ENDC}")
+        return
+
+    match_info = data.get('prompt_match', {})
+    match_status = match_info.get('status', 'unknown')
     
-    # Set up server parameters
-    server_params = StdioServerParameters(
-        command="python",
-        args=[PROMPTLAB_SERVER_SCRIPT],
-    )
-    
-    # Initialize LLM
-    llm = ChatOpenAI(model=MODEL_NAME, temperature=0.7)
-    
-    try:
-        # Connect to the PromptLab server
-        async with stdio_client(server_params) as (read, write):
-            logger.info("Connected to PromptLab server")
-            
-            async with ClientSession(read, write) as session:
-                # Initialize the connection
-                await session.initialize()
-                
-                # Call the optimize_query tool
-                result = await session.call_tool(
-                    name="optimize_query", 
-                    arguments={"query": query}
-                )
-                
-                # Extract result
-                if hasattr(result, 'content') and len(result.content) > 0:
-                    result_data = json.loads(result.content[0].text)
-                    enhanced_query = result_data.get("enhanced_query", query)
-                    initial_enhanced_query = result_data.get("initial_enhanced_query")
-                    content_type = result_data.get("content_type")
-                    validation_issues = result_data.get("validation_issues", [])
-                    validation_result = result_data.get("validation_result", "UNKNOWN")
-                    prompt_match = result_data.get("prompt_match", {})
-                    was_enhanced = result_data.get("enhanced", False)
-                else:
-                    logger.warning("No content returned from server")
-                    enhanced_query = query
-                    initial_enhanced_query = None
-                    content_type = None
-                    validation_issues = ["Server returned no content"]
-                    validation_result = "UNKNOWN"
-                    prompt_match = {"status": "unknown"}
-                    was_enhanced = False
-                
-                # Log adjustment information
-                if validation_result == "NEEDS_ADJUSTMENT" and initial_enhanced_query:
-                    logger.info(f"Query required adjustment: {validation_result}")
-                    for issue in validation_issues:
-                        logger.info(f"Validation issue: {issue}")
-                
-                # Generate response using the enhanced query
-                logger.info(f"Generating response using {'enhanced' if was_enhanced else 'original'} query")
-                response = await llm.ainvoke([HumanMessage(content=enhanced_query)])
-                
-                # Return all results with adjustment details
-                return {
-                    "original_query": query,
-                    "content_type": content_type, 
-                    "enhanced": was_enhanced,
-                    "prompt_match": prompt_match,
-                    "initial_enhanced_query": initial_enhanced_query if was_enhanced else None,
-                    "enhanced_query": enhanced_query,
-                    "validation_issues": validation_issues,
-                    "validation_result": validation_result,
-                    "response": response.content
-                }
-    
-    except Exception as e:
-        logger.error(f"Error processing query: {e}", exc_info=True)
-        return {"error": str(e), "original_query": query, "enhanced": False}
+    print(f"{Colors.BLUE}Prompt Match Status:{Colors.ENDC} {match_status}")
+    if verbose and match_info.get('reasoning'):
+         print(f"{Colors.BLUE}Reasoning:{Colors.ENDC} {match_info.get('reasoning')}")
+
+    if data.get('enhanced'):
+        prompt_name = match_info.get('prompt_name', 'an appropriate template')
+        print(f"\n{Colors.GREEN}{Colors.BOLD}Enhanced Query (Generated by {prompt_name}):{Colors.ENDC}")
+        print("-" * 80)
+        print(data.get('final_query'))
+        print("-" * 80)
+    else:
+        print(f"\n{Colors.BLUE}Query was not enhanced.{Colors.ENDC}")
 
 async def main():
-    parser = argparse.ArgumentParser(description="PromptLab: AI Query Enhancement with MLflow")
-    parser.add_argument("query", nargs="?", help="The query to process")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Show validation issues and debug info")
-    parser.add_argument("--list", action="store_true", help="List available prompts from MLflow")
-    parser.add_argument("--temperature", type=float, default=0.7, help="Temperature for response generation (0.0-1.0)")
+    """Main function to launch the server and call a tool."""
+    parser = argparse.ArgumentParser(
+        description="A client to interact with the PromptLab MCP server.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("query", nargs="?", default=None, help="The user query to process and enhance.")
+    group.add_argument("--list", action="store_true", help="List all available prompts from the server.")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output.")
     args = parser.parse_args()
-    
-    # Set temperature from args
-    global MODEL_NAME
-    MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
-    
-    if args.list:
-        await list_available_prompts()
-    elif args.query:
-        # Process the query
-        result = await process_query(args.query)
-        
-        # Display results
-        print("\n=== PromptLab Results ===\n")
-        print(f"Original Query: {result['original_query']}")
-        
-        # Show prompt matching information
-        prompt_match = result.get("prompt_match", {})
-        match_status = prompt_match.get("status", "unknown")
-        
-        if match_status == "matched":
-            print(f"\nMatched to: {prompt_match.get('prompt_name')}")
-            print(f"Confidence: {prompt_match.get('confidence')}%")
-            if args.verbose and prompt_match.get('reasoning'):
-                print(f"Reasoning: {prompt_match.get('reasoning')}")
-        elif match_status == "no_match":
-            print("\nNo matching prompt template found.")
-            if args.verbose and prompt_match.get('reasoning'):
-                print(f"Reason: {prompt_match.get('reasoning')}")
-        elif match_status == "no_prompts_available":
-            print("\nNo prompts available in MLflow registry.")
-        
-        if result.get("content_type"):
-            print(f"Content Type: {result['content_type']}")
-        
-        # Show the enhanced query details if enhancement was performed
-        if result.get("enhanced", False):
-            # Show the initial enhanced query if it differs from the final one
-            if result.get("initial_enhanced_query") and result.get("initial_enhanced_query") != result.get("enhanced_query"):
-                print("\nInitial Enhanced Query:")
-                print("-" * 80)
-                print(result['initial_enhanced_query'])
-                print("-" * 80)
+
+    # Use sys.executable to ensure we use the python from the activated venv
+    server_params = StdioServerParameters(command=sys.executable, args=[PROMPTLAB_SERVER_SCRIPT])
+
+    try:
+        async with stdio_client(server_params) as (read, write):
+            logger.info("Client connected to the server process.")
+            async with ClientSession(read, write) as session:
+                await session.initialize()
                 
-                if result.get("validation_issues"):
-                    print("\nValidation Issues Detected:")
-                    for issue in result["validation_issues"]:
-                        print(f"- {issue}")
-                    print("\nAdjusted Query:")
+                if args.list:
+                    result = await session.call_tool(name="list_prompts", arguments={})
                 else:
-                    print("\nQuery Adjusted:")
-            else:
-                print("\nEnhanced Query:")
-            
-            if result.get("enhanced_query"):
-                print("-" * 80)
-                print(result['enhanced_query'])
-                print("-" * 80)
-            
-            # Show more detailed validation information if verbose mode
-            if args.verbose and not result.get("initial_enhanced_query") and result.get("validation_issues"):
-                print("\nValidation Details:")
-                for issue in result["validation_issues"]:
-                    print(f"- {issue}")
-        else:
-            print("\nUsing original query (no enhancement applied)")
-        
-        if result.get("response"):
-            print("\nResponse:")
-            print("=" * 80)
-            print(result['response'])
-            print("=" * 80)
-        
-        if result.get("error"):
-            print(f"\nError: {result['error']}")
-    else:
-        parser.print_help()
+                    result = await session.call_tool(name="optimize_query", arguments={"query": args.query})
+
+                if hasattr(result, 'content') and len(result.content) > 0:
+                    result_data = json.loads(result.content[0].text)
+                    if args.list:
+                        print(json.dumps(result_data, indent=2, ensure_ascii=False))
+                    else:
+                        pretty_print_result(result_data, args.verbose)
+                else:
+                    print(f"{Colors.FAIL}Server returned no content.{Colors.ENDC}")
+
+    except Exception as e:
+        logger.error(f"An error occurred during client execution: {e}", exc_info=True)
+        print(f"{Colors.FAIL}A client-side error occurred. Please check the logs.{Colors.ENDC}")
 
 if __name__ == "__main__":
+    if not os.path.exists(PROMPTLAB_SERVER_SCRIPT):
+        print(f"{Colors.FAIL}Error: Server script '{PROMPTLAB_SERVER_SCRIPT}' not found.{Colors.ENDC}")
+        sys.exit(1)
     asyncio.run(main())
