@@ -9,34 +9,37 @@
 ```
 PromptLab/
 ├── 📁 核心文件
-│   ├── promptlab_server.py      # MCP 服务器主程序
-│   ├── promptlab_client.py      # 客户端示例
-│   ├── requirements.txt         # Python 依赖包
-│   └── pyproject.toml          # 项目配置
+│   ├── enhanced_promptlab_server.py  # 增强版 MCP 服务器
+│   ├── promptlab_server.py          # 基础版 MCP 服务器
+│   ├── promptlab_client.py          # 客户端示例
+│   ├── multi_model_config.py        # 多模型配置管理
+│   ├── model_adapters.py            # 统一模型适配器
+│   ├── performance_optimization.py  # 性能优化模块
+│   ├── requirements.txt             # Python 依赖包
+│   └── pyproject.toml              # 项目配置
 │
 ├── 📁 配置文件
-│   ├── mcp.json                # 通用 MCP 配置
-│   ├── mcp_trae.json           # Trae AI 专用配置
-│   └── advanced_prompts.json   # 高级提示词模板
+│   ├── models_config.yaml          # 模型配置文件
+│   ├── mcp.json                    # 通用 MCP 配置
+│   ├── mcp_trae.json               # Trae AI 专用配置
+│   ├── advanced_prompts.json       # 高级提示词模板
+│   └── .env                        # 环境变量配置
 │
 ├── 📁 启动脚本
-│   ├── start_mcp_server.py     # 跨平台启动脚本（推荐）
-│   ├── start_promptlab_mcp.ps1 # PowerShell 启动脚本
-│   ├── start_promptlab_mcp.bat # 批处理启动脚本
-│   ├── setup_and_start.py      # 自动安装和启动
-│   └── test_mcp.py             # MCP 服务器测试
+│   ├── start_enhanced_promptlab.py # 增强版启动脚本（推荐）
+│   ├── start_enhanced.ps1          # PowerShell 启动脚本
+│   ├── start_enhanced.bat          # 批处理启动脚本
 │
 ├── 📁 工具脚本
-│   ├── register_prompts.py     # 注册示例提示词
-│   └── start_mcp.py           # 简单启动脚本
+│   └── register_prompts.py         # 注册示例提示词
+│
+├── 📁 界面文件
+│   └── model_management_ui.html    # Web 管理界面
 │
 ├── 📁 文档
-│   ├── README.md               # 项目说明
-│   ├── 使用说明.md             # 详细使用说明
-│   ├── 快速启动指南.md         # 快速上手指南
-│   ├── 启动脚本说明.md         # 启动脚本对比
-│   ├── terminal_management_rules.md # 终端管理规则
-│   └── 测试流程.md             # 测试流程说明
+│   ├── README.md                   # 项目说明文档（增强版）
+│   ├── Git使用说明.md              # Git 操作指南
+│   └── terminal_management_rules.md # 终端管理规则
 │
 └── 📁 其他
     ├── .gitignore              # Git 忽略文件

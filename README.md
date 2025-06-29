@@ -1,475 +1,331 @@
-# PromptLab: MCP Server for AI Query Enhancement
+# Enhanced PromptLab MCP Server
 
-PromptLab is a **Model Context Protocol (MCP) server** that transforms basic user queries into optimized prompts using MLflow Prompt Registry and Google's Gemini 2.5 Pro model. It intelligently matches user requests to the most appropriate prompt template and enhances them for better AI responses.
+🚀 **多模型AI提示词优化平台** | **Multi-Model AI Prompt Optimization Platform**
 
-## 🔍 Overview
+## 📋 项目简介
 
-PromptLab is designed as a standard MCP tool that can be integrated into any MCP-compatible application (Claude Desktop, Cline, etc.):
+Enhanced PromptLab 是一个基于 MCP (Model Context Protocol) 标准的增强版AI提示词优化平台，支持多种AI模型提供商，提供智能提示词优化、性能监控、成本追踪等功能。
 
-- **🤖 MCP Standard Compliance**: Full Model Context Protocol implementation
-- **🧠 Gemini 2.5 Pro Integration**: Powered by Google's latest AI model
-- **📚 Centralized Prompt Management**: Store, version, and manage prompts in MLflow
-- **🎯 Dynamic Matching**: Intelligently match user queries to the best prompt template
-- **📈 Version Control**: Track prompt history with production and archive aliases
-- **🔧 Extensible**: Easily add new prompt types without code changes
+### ✨ 核心特性
 
-## 🏗️ Architecture
+- 🤖 **多模型支持**: 支持 OpenAI、Claude、Gemini、DeepSeek、通义千问等主流AI模型
+- 🔄 **智能切换**: 自动模型选择和负载均衡
+- ⚡ **性能优化**: 查询缓存、响应时间优化
+- 📊 **监控追踪**: MLflow集成，完整的性能和成本监控
+- 🎯 **提示词优化**: 智能提示词分析和优化建议
+- 🌐 **Web管理**: 可视化模型管理界面
+- 🔒 **安全可靠**: API密钥安全管理，故障转移机制
 
-The system consists of three main components:
-
-1. **Prompt Registry** (`register_prompts.py`) - Tool for registering and managing prompts in MLflow
-2. **Server** (`promptlab_server.py`) - Server with dynamic prompt matching and LangGraph workflow
-3. **Client** (`promptlab_client.py`) - Lightweight client for processing user queries
-
-### Workflow Process
-
-![PromptLab Workflow](promptlab_architecture.png)
-
-1. **Prompt Registration**: Register prompt templates in MLflow with versioning and aliasing
-2. **Prompt Loading**: Server loads all available prompts from MLflow at startup
-3. **Query Submission**: User submits a natural language query via the client
-4. **Intelligent Matching**: LLM analyzes the query and selects the most appropriate prompt template
-5. **Parameter Extraction**: System extracts required parameters from the query
-6. **Template Application**: Selected template is applied with extracted parameters
-7. **Validation & Adjustment**: Enhanced prompt is validated and adjusted if needed
-8. **Response Generation**: Optimized prompt produces a high-quality response
-
-## 📂 Code Structure
+## 🏗️ 系统架构
 
 ```
-promptlab/
-├── promptlab_server.py            # Main server with LangGraph workflow
-├── promptlab_client.py            # Client for processing queries
-├── register_prompts.py            # MLflow prompt management tool
-├── requirements.txt               # Project dependencies
-├── advanced_prompts.json          # Additional prompt templates
-└── README.md                      # Project documentation
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   MCP Client    │────│ Enhanced Server │────│  Model Adapters │
+│   (Trae AI)     │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                        │
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │  Performance    │    │   AI Models     │
+                       │   Monitor       │    │  (Multi-vendor) │
+                       └─────────────────┘    └─────────────────┘
+                                │
+                       ┌─────────────────┐
+                       │     MLflow      │
+                       │   Tracking      │
+                       └─────────────────┘
 ```
 
-### Core Components:
+## 🚀 快速开始
 
-#### `register_prompts.py`
-- **Purpose**: Manages prompts in MLflow Registry
-- **Key Functions**:
-  - `register_prompt()`: Register a new prompt or version
-  - `update_prompt()`: Update an existing prompt (archives previous production)
-  - `list_prompts()`: List all registered prompts
-  - `register_from_file()`: Register multiple prompts from JSON
-  - `register_sample_prompts()`: Initialize with standard prompts
+### 1. 环境要求
 
-#### `promptlab_server.py`
-- **Purpose**: Processes queries using LangGraph workflow
-- **Key Components**:
-  - `load_all_prompts()`: Loads prompts from MLflow
-  - `match_prompt()`: Matches queries to appropriate templates
-  - `enhance_query()`: Applies selected template
-  - `validate_query()`: Validates enhanced queries
-  - `LangGraph workflow`: Orchestrates the query enhancement process
+- Python 3.8+
+- Windows/Linux/macOS
+- 8GB+ RAM (推荐)
 
-#### `promptlab_client.py`
-- **Purpose**: Provides user interface to the service
-- **Key Features**:
-  - Process queries with enhanced prompts
-  - List available prompts
-  - Display detailed prompt matching information
+### 2. 一键启动
 
-## 🛠️ Technology Stack
-
-- **MCP (Model Context Protocol)**: Standard protocol for AI tool integration
-- **Google Vertex AI**: Gemini 2.5 Pro model for intelligent prompt matching
-- **MLflow**: Prompt registry and experiment tracking
-- **LangGraph**: Workflow orchestration and state management
-- **Python 3.12**: Core runtime environment
-- **Rich**: Enhanced console output and formatting
-
-## 📦 Installation & Setup
-
-### Prerequisites
-- Python 3.12+
-- Google Cloud Platform account with Vertex AI enabled
-- MLflow server (local or remote)
-- MCP-compatible application (Claude Desktop, Cline, etc.)
-
-### Step 1: Environment Setup
-
-1. **Clone and navigate to the repository**:
-   ```bash
-   git clone https://github.com/iRahulPandey/PromptLab.git
-   cd PromptLab
-   ```
-
-2. **Create and activate virtual environment**:
-   ```bash
-   python -m venv venv
-   # Windows
-   .\venv\Scripts\Activate.ps1
-   # Linux/Mac
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Step 2: Configuration
-
-1. **Configure environment variables**:
-   Create a `.env` file:
-   ```env
-   GCP_PROJECT_ID="your-gcp-project-id"
-   GCP_LOCATION="us-central1"
-   MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
-   ```
-
-2. **Set up Google Cloud authentication**:
-   ```bash
-   # Install Google Cloud CLI and authenticate
-   gcloud auth application-default login
-   ```
-
-### Step 3: Start Services
-
-1. **Start MLflow server** (in a separate terminal):
-   ```bash
-   mlflow server --host 127.0.0.1 --port 5000
-   ```
-
-2. **Register sample prompts**:
-   ```bash
-   python register_prompts.py register-samples
-   ```
-
-3. **Test the MCP server**:
-   ```bash
-   python test_mcp.py
-   ```
-
-### Registering Prompts
-
-Before using PromptLab, you need to register prompts in MLflow:
-
+#### Windows 用户
 ```bash
-# Register sample prompts (essay, email, technical, creative)
-python register_prompts.py register-samples
+# 方式1: 批处理文件
+start_enhanced.bat
 
-# Register additional prompt types (recommended)
-python register_prompts.py register-file --file advanced_prompts.json
+# 方式2: PowerShell脚本
+.\start_enhanced.ps1
 
-# Verify registered prompts
-python register_prompts.py list
+# 方式3: Python脚本
+python start_enhanced_promptlab.py
 ```
 
-### Step 4: MCP Client Configuration
-
-1. **Add to your MCP client configuration**:
-   
-   For **Claude Desktop**, add to your `claude_desktop_config.json`:
-   ```json
-   {
-     "mcpServers": {
-       "promptlab": {
-         "command": "python",
-         "args": ["e:\\User\\MCP\\PromptLab\\promptlab_server.py"],
-         "cwd": "e:\\User\\MCP\\PromptLab",
-         "env": {
-           "GCP_PROJECT_ID": "your-gcp-project-id",
-           "GCP_LOCATION": "us-central1",
-           "MLFLOW_TRACKING_URI": "http://127.0.0.1:5000"
-         }
-       }
-     }
-   }
-   ```
-
-   For **Cline** or other MCP clients, use the provided `mcp.json` configuration file.
-
-2. **Restart your MCP client** to load the new server.
-
-## 🚀 Usage
-
-### Available MCP Tools
-
-Once configured, PromptLab provides these tools in your MCP client:
-
-1. **`optimize_query`** - Enhance user queries with best-matched prompts
-   - Input: Your natural language query
-   - Output: Enhanced prompt optimized for AI responses
-
-2. **`list_prompts`** - List all available prompt templates
-   - Shows all registered prompts with their descriptions
-
-3. **`reload_prompts`** - Reload prompts from MLflow registry
-   - Refreshes the prompt cache from MLflow
-
-### Example Usage in Claude Desktop
-
-1. **Optimize a query**:
-   ```
-   User: "Help me write a blog post about AI"
-   PromptLab: [Uses blog_prompt template to enhance the request]
-   ```
-
-2. **List available prompts**:
-   ```
-   User: "What prompts are available?"
-   PromptLab: [Shows all registered prompt templates]
-   ```
-
-### Command Line Usage (Development)
-
+#### Linux/macOS 用户
 ```bash
-# Register prompts from JSON file
-python register_prompts.py register-from-file advanced_prompts.json
+# 安装依赖
+pip install -r requirements.txt
 
-# Register individual prompt
-python register_prompts.py register "My Prompt" "Template: {input}" "Added new prompt"
-
-# List all prompts
-python register_prompts.py list
-
-# Get prompt details
-python register_prompts.py details "essay_prompt"
-
-# Test the MCP server
-python test_mcp.py
+# 启动服务器
+python start_enhanced_promptlab.py
 ```
 
-## 📋 Prompt Management
+### 3. 配置API密钥
 
-### Available Prompt Types
+编辑 `.env` 文件，添加您的API密钥：
 
-PromptLab supports a wide range of prompt types:
+```env
+# OpenAI API
+OPENAI_API_KEY=your_openai_api_key_here
 
-| Prompt Type | Description | Example Use Case |
-|------------|-------------|-----------------|
-| essay_prompt | Academic writing | Research papers, analyses |
-| email_prompt | Email composition | Professional communications |
-| technical_prompt | Technical explanations | Concepts, technologies |
-| creative_prompt | Creative writing | Stories, poems, fiction |
-| code_prompt | Code generation | Functions, algorithms |
-| summary_prompt | Content summarization | Articles, documents |
-| analysis_prompt | Critical analysis | Data, texts, concepts |
-| qa_prompt | Question answering | Context-based answers |
-| social_media_prompt | Social media content | Platform-specific posts |
-| blog_prompt | Blog article writing | Online articles |
-| report_prompt | Formal reports | Business, technical reports |
-| letter_prompt | Formal letters | Cover, recommendation letters |
-| presentation_prompt | Presentation outlines | Slides, talks |
-| review_prompt | Reviews | Products, media, services |
-| comparison_prompt | Comparisons | Products, concepts, options |
-| instruction_prompt | How-to guides | Step-by-step instructions |
-| custom_prompt | Customizable template | Specialized use cases |
+# Anthropic Claude API
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
-### Registering New Prompts
+# DeepSeek API
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
-You can register new prompts in several ways:
+# 阿里云通义千问 API
+QWEN_API_KEY=your_qwen_api_key_here
 
-#### 1. From Command Line
-
-```bash
-python register_prompts.py register \
-  --name "new_prompt" \
-  --template "Your template with {{ variables }}" \
-  --message "Initial version" \
-  --tags '{"type": "custom", "task": "specialized"}'
+# 智谱AI API
+ZHIPU_API_KEY=your_zhipu_api_key_here
 ```
 
-#### 2. From a Template File
+## 🛠️ 功能详解
 
-```bash
-# Create a text file with your template
-echo "Template content with {{ variables }}" > template.txt
+### MCP 工具列表
 
-# Register using the file
-python register_prompts.py register \
-  --name "long_prompt" \
-  --template template.txt \
-  --message "Complex template"
-```
+| 工具名称 | 功能描述 | 参数 |
+|---------|---------|------|
+| `list_models` | 查看所有可用模型 | 无 |
+| `switch_model` | 切换当前使用的模型 | `model_name` |
+| `get_model_status` | 获取模型状态信息 | `model_name` (可选) |
+| `add_model` | 添加新的模型配置 | `config` |
+| `remove_model` | 移除模型配置 | `model_name` |
+| `optimize_query` | 优化用户查询 | `query`, `task_type`, `model_name` (可选) |
+| `list_prompts` | 查看提示词模板 | 无 |
+| `reload_prompts` | 重新加载提示词模板 | 无 |
+| `get_performance_stats` | 获取性能统计 | 无 |
+| `clear_cache` | 清除缓存 | 无 |
 
-#### 3. From a JSON File
+### 模型支持
 
-Create a JSON file with multiple prompts:
+#### 🤖 支持的AI模型
 
-```json
-{
-  "prompts": [
-    {
-      "name": "prompt_name",
-      "template": "Template with {{ variables }}",
-      "commit_message": "Description",
-      "tags": {"type": "category", "task": "purpose"}
-    }
-  ]
-}
-```
+| 提供商 | 模型 | 类型 | 状态 |
+|-------|------|------|------|
+| **Google** | Gemini 2.5 Pro | 多模态 | ✅ |
+| **OpenAI** | GPT-4o, GPT-4o Mini | 文本 | ✅ |
+| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Haiku | 文本 | ✅ |
+| **DeepSeek** | DeepSeek Chat, DeepSeek Coder | 文本/代码 | ✅ |
+| **阿里云** | 通义千问 Max, Plus | 中文优化 | ✅ |
+| **智谱AI** | GLM-4 Plus, GLM-4 Flash | 中文优化 | ✅ |
+| **Ollama** | Llama 3.1, Qwen 2.5 | 本地部署 | ✅ |
 
-Then register them:
+#### 🎯 模型组配置
 
-```bash
-python register_prompts.py register-file --file your_prompts.json
-```
+- **编程专用**: DeepSeek Coder, GPT-4o
+- **推理分析**: Claude 3.5 Sonnet, Gemini 2.5 Pro
+- **中文优化**: 通义千问, GLM-4, Qwen 2.5
+- **经济实惠**: GPT-4o Mini, Claude 3 Haiku
+- **本地模型**: Ollama Llama 3.1, Qwen 2.5
+- **多模态**: Gemini 2.5 Pro
 
-### Updating Existing Prompts
+### 性能优化
 
-When you update an existing prompt, the system automatically:
-1. Archives the previous production version
-2. Sets the new version as production
+#### 🚀 缓存机制
+- **查询缓存**: 5分钟TTL，提高响应速度
+- **结果缓存**: 智能缓存策略，减少API调用
+- **性能监控**: 实时响应时间和成功率统计
 
-```bash
-python register_prompts.py update \
-  --name "essay_prompt" \
-  --template "New improved template with {{ variables }}" \
-  --message "Enhanced clarity and structure"
-```
+#### 📊 监控指标
+- 请求总数和成功率
+- 平均响应时间
+- 缓存命中率
+- 模型使用统计
+- 成本追踪
 
-### Viewing Prompt Details
+## 🌐 Web管理界面
 
-```bash
-# List all prompts
-python register_prompts.py list
+访问 `model_management_ui.html` 获得可视化管理体验：
 
-# View detailed information about a specific prompt
-python register_prompts.py details --name "essay_prompt"
-```
+- 📊 **模型概览**: 实时状态监控
+- ⚙️ **模型配置**: 添加/编辑/删除模型
+- 📈 **性能监控**: 图表化性能数据
+- 🔧 **系统设置**: 全局配置管理
 
-## 🛠️ Advanced Usage
-
-### Template Variables
-
-Templates use variables in `{{ variable }}` format:
-
-```
-Write a {{ formality }} email to my {{ recipient_type }} about {{ topic }} that includes:
-- A clear subject line
-- Appropriate greeting
-...
-```
-
-When matching a query, the system automatically extracts values for these variables.
-
-### Production and Archive Aliases
-
-Each prompt can have different versions with aliases:
-- **production**: The current active version (used by default)
-- **archived**: Previous production versions
-
-This allows for:
-- Rolling back to previous versions if needed
-- Tracking the history of prompt changes
-
-### Custom Prompt Registration
-
-For specialized use cases, you can create highly customized prompts:
-
-```bash
-python register_prompts.py register \
-  --name "specialized_prompt" \
-  --template "You are a {{ role }} with expertise in {{ domain }}. Create a {{ document_type }} about {{ topic }} that demonstrates {{ quality }}." \
-  --message "Specialized template" \
-  --tags '{"type": "custom", "task": "specialized", "domain": "finance"}'
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **"GCP authentication failed"**
-   ```bash
-   # Re-authenticate with Google Cloud
-   gcloud auth application-default login
-   ```
-
-2. **"MLflow connection refused"**
-   ```bash
-   # Make sure MLflow server is running
-   mlflow server --host 127.0.0.1 --port 5000
-   ```
-
-3. **"No prompts found"**
-   ```bash
-   # Register sample prompts
-   python register_prompts.py register-samples
-   ```
-
-4. **"MCP server not responding"**
-   ```bash
-   # Test the server
-   python test_mcp.py
-   ```
-
-5. **"Virtual environment not activated"**
-   ```bash
-   # Windows
-   .\venv\Scripts\Activate.ps1
-   # Linux/Mac
-   source venv/bin/activate
-   ```
-
-### Debug Mode
-
-For detailed logging, set the environment variable:
-```bash
-export LOG_LEVEL="DEBUG"
-```
-
-### No Matching Prompt Found
-
-If the system can't match a query to any prompt template, it will:
-1. Log a message that no match was found
-2. Use the original query without enhancement
-3. Still generate a response
-
-You can add more diverse prompt templates to improve matching.
-
-### LLM Connection Issues
-
-If the Gemini service is unavailable, the system falls back to:
-1. Keyword-based matching for prompt selection
-2. Simple parameter extraction
-3. Basic prompt enhancement
-
-This ensures the system remains functional even without LLM access.
-
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 PromptLab/
-├── promptlab_server.py      # MCP server with Gemini 2.5 Pro integration
-├── promptlab_client.py      # Legacy HTTP client (for reference)
-├── register_prompts.py      # MLflow prompt registration utilities
-├── start_mcp.py            # MCP server startup script
-├── test_mcp.py             # MCP server testing script
-├── advanced_prompts.json    # Sample prompt templates
-├── mcp.json                # MCP client configuration
-├── requirements.txt         # Python dependencies
-├── .env                     # Environment configuration
-├── 测试流程.md              # Testing workflow (Chinese)
-└── README.md               # This documentation
+├── 📄 enhanced_promptlab_server.py    # 增强版MCP服务器
+├── 📄 multi_model_config.py           # 多模型配置管理
+├── 📄 model_adapters.py               # 模型适配器
+├── 📄 performance_optimization.py     # 性能优化模块
+├── 📄 models_config.yaml              # 模型配置文件
+├── 📄 advanced_prompts.json           # 提示词模板
+├── 📄 .env                            # 环境变量配置
+├── 📄 requirements.txt                # 依赖包列表
+├── 🚀 start_enhanced_promptlab.py     # 启动脚本
+├── 🚀 start_enhanced.bat              # Windows启动脚本
+├── 🚀 start_enhanced.ps1              # PowerShell启动脚本
+├── 🌐 model_management_ui.html        # Web管理界面
+└── 📚 README_Enhanced.md              # 本文档
 ```
 
-## 🚀 Quick Start Checklist
+## 🔧 高级配置
 
-- [ ] Python 3.12+ installed
-- [ ] Virtual environment created and activated
-- [ ] Dependencies installed (`pip install -r requirements.txt`)
-- [ ] `.env` file configured with GCP credentials
-- [ ] Google Cloud authentication completed
-- [ ] MLflow server running (`mlflow server --host 127.0.0.1 --port 5000`)
-- [ ] Sample prompts registered (`python register_prompts.py register-samples`)
-- [ ] MCP server tested (`python test_mcp.py`)
-- [ ] MCP client configured (Claude Desktop/Cline)
-- [ ] Client restarted to load the new server
+### 模型配置示例
 
-## 🤝 Contributing
+```yaml
+models:
+  gpt-4o:
+    provider: openai
+    model_id: gpt-4o
+    api_base: https://api.openai.com/v1
+    enabled: true
+    priority: 1
+    temperature: 0.7
+    max_tokens: 4096
+    cost_per_1k_tokens: 0.03
+    
+  claude-3.5-sonnet:
+    provider: anthropic
+    model_id: claude-3-5-sonnet-20241022
+    api_base: https://api.anthropic.com
+    enabled: true
+    priority: 2
+    temperature: 0.7
+    max_tokens: 4096
+    cost_per_1k_tokens: 0.015
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### 环境变量配置
 
-## 📄 License
+```env
+# 基础配置
+GCP_PROJECT_ID=your-gcp-project
+GCP_REGION=us-central1
+MLFLOW_TRACKING_URI=http://localhost:5000
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+# 调试模式
+PROMPTLAB_DEBUG=true
+
+# 性能配置
+CACHE_TTL=300
+MAX_RETRIES=3
+TIMEOUT=30
+
+# 负载均衡
+LOAD_BALANCING=true
+FAILOVER_ENABLED=true
+```
+
+## 📊 使用示例
+
+### 1. 查看可用模型
+
+```python
+# MCP客户端调用
+result = await client.call_tool("list_models")
+print(result)
+```
+
+### 2. 切换模型
+
+```python
+# 切换到GPT-4o
+result = await client.call_tool("switch_model", {
+    "model_name": "gpt-4o"
+})
+```
+
+### 3. 优化查询
+
+```python
+# 优化编程相关查询
+result = await client.call_tool("optimize_query", {
+    "query": "如何实现一个高效的排序算法？",
+    "task_type": "code",
+    "model_name": "deepseek-coder"  # 可选
+})
+```
+
+### 4. 获取性能统计
+
+```python
+# 查看性能数据
+stats = await client.call_tool("get_performance_stats")
+print(f"缓存命中率: {stats['cache_hit_rate']}%")
+print(f"平均响应时间: {stats['avg_response_time']}ms")
+```
+
+## 🔍 故障排除
+
+### 常见问题
+
+#### 1. 依赖安装失败
+```bash
+# 升级pip
+python -m pip install --upgrade pip
+
+# 清除缓存重新安装
+pip cache purge
+pip install -r requirements.txt
+```
+
+#### 2. API密钥配置错误
+- 检查 `.env` 文件格式
+- 确认API密钥有效性
+- 验证API配额和权限
+
+#### 3. MLflow服务器启动失败
+```bash
+# 手动启动MLflow
+mlflow server --backend-store-uri file://./mlruns --default-artifact-root file://./mlruns --host 127.0.0.1 --port 5000
+```
+
+#### 4. 模型调用失败
+- 检查网络连接
+- 验证API密钥
+- 查看模型配置
+- 检查API配额
+
+### 日志调试
+
+启用调试模式：
+```env
+PROMPTLAB_DEBUG=true
+```
+
+查看详细日志：
+```bash
+python start_enhanced_promptlab.py --log-level DEBUG
+```
+
+## 🤝 贡献指南
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开 Pull Request
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🙏 致谢
+
+- [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) - 核心协议支持
+- [LangChain](https://github.com/langchain-ai/langchain) - AI应用框架
+- [MLflow](https://github.com/mlflow/mlflow) - 机器学习生命周期管理
+- 所有AI模型提供商的API支持
+
+## 📞 支持
+
+如有问题或建议，请：
+
+1. 查看 [FAQ](FAQ.md)
+2. 提交 [Issue](https://github.com/your-repo/issues)
+3. 加入讨论 [Discussions](https://github.com/your-repo/discussions)
 
 ---
 
-**🎉 Congratulations!** You now have a fully functional MCP server that enhances AI queries using intelligent prompt matching with Gemini 2.5 Pro and MLflow integration.
+**Enhanced PromptLab** - 让AI提示词优化更简单、更智能、更高效！ 🚀
